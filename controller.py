@@ -1,5 +1,4 @@
 import pdfplumber
-import math
 
 
 def get_filtered_text(file_to_parse: str):
@@ -11,7 +10,6 @@ def get_filtered_text(file_to_parse: str):
     with pdfplumber.open(file_to_parse) as pdf:
         #print(pdf.pages)
         for i in range(len(pdf.pages)):
-            # TODO change to take all pages
             page_text = pdf.pages[i].dedupe_chars(tolerance=1)
 
             if i == 0 or i == 1 or i == 2:
