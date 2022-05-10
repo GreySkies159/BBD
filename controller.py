@@ -1,5 +1,4 @@
 import pdfplumber
-from tkinter import ttk
 import re
 
 

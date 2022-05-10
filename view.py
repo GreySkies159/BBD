@@ -11,6 +11,7 @@ import api
 import controller as con
 
 opened_pdf_file_location = ''
+is_thread_running  = 0
 
 # declaration
 root = Tk()
@@ -46,9 +47,9 @@ self_citation_var.set(0)
 selected_file_label = ttk.Label(frm, textvariable=selected_file_var)
 
 file_label = ttk.Label(frm, text="Įkelkite mokslinį straipsnį")
-file_button = ttk.Button(frm, text="Pasirinkite failą", command=lambda: open_file())
+file_button = ttk.Button(frm, text="Pasirinkite failą", command=lambda: change_file_selection_buttons_action())
 
-analize_button = ttk.Button(frm, text="Nuskaityti failą", command=lambda: get_data_from_file())
+analize_button = ttk.Button(frm, text="Nuskaityti failą", command=lambda: change_file_analize_button_acction())
 
 autorius_label = ttk.Label(frm, text="Straipsnio autorius(-iai)")
 autorius_laukelis = ttk.Entry(frm)
@@ -109,6 +110,8 @@ def open_file():
         extention = file[-3:]
         if extention != 'pdf':
             tkinter.messagebox.showerror(title="Netinkamas failo tipas", message="Prašome pasirinkti tik pdf failus")
+            opened_pdf_file_location = ''
+            hide_analize_button()
             return
 
         opened_pdf_file_location = file
@@ -117,26 +120,26 @@ def open_file():
         show_selected_file()
     else:
         hide_analize_button()
-        tkinter.messagebox.showerror(title="Failo pasirinkimas", message="Prašome pasirinkti failą")
+        tkinter.messagebox.showerror(title="Failas nėra pasirinktas", message="Prašome pasirinkti failą")
 
 
 def get_data_from_file():
     global opened_pdf_file_location
     abstract = 0
+    global is_thread_running
 
     # (opened_pdf_file_location)
     print(opened_pdf_file_location)
     if opened_pdf_file_location != '':
 
         hide_selected_UI()
+        #start progress
         show_progress_bar()
         pb.start()
-
-        # TODO protect from selecting another file while the thread is running
         # threading
-        # TODO change function not to get just filtered text but also full structure evaluation + ui update based on the return
         getting_information_thread = threading.Thread(target=update_UI,
-                                                      args=(pb, pb_text, opened_pdf_file_location))
+                                                      args=(pb, pb_text, opened_pdf_file_location), daemon=True)
+        is_thread_running=1
         getting_information_thread.start()
 
         # content = con.get_filtered_text(opened_pdf_file_location)
@@ -150,10 +153,22 @@ def get_data_from_file():
         hide_selected_UI()
         tkinter.messagebox.showerror(title="Failo pasirinkimas", message="Joks failas nebuvo pasirinktas")
 
+def change_file_selection_buttons_action():
+    global is_thread_running
+    if is_thread_running == 1:
+        tkinter.messagebox.showerror(title="Vyksta analizė", message="Kol failas yra analizuojamas, kito failo pasirinkti negalima")
+    else:
+        open_file()
+
+def change_file_analize_button_acction():
+    global is_thread_running
+    if is_thread_running == 1:
+        tkinter.messagebox.showerror(title="Vyksta analizė",
+                                     message="Kol failas yra analizuojamas, kito failo analizuoti negalima")
+    else:
+        get_data_from_file()
 
 def selected_file_UI():
-    print(":)")
-
     show_selected_file()
     autorius_label.grid(row=2, column=0)
     autorius_laukelis.grid(row=2, column=1)
@@ -178,7 +193,6 @@ def selected_file_UI():
 
 
 def hide_selected_UI():
-    print(":<")
     selected_file_label.grid_forget()
 
     autorius_label.grid_forget()
@@ -220,12 +234,13 @@ def hide_analize_button():
 
 
 def show_progress_bar():
+
     pb_text.grid(row=1, column=1, sticky=EW, pady=(80, 0), columnspan=3)
     pb.grid(row=2, column=1, sticky=EW, pady=5, columnspan=3)
 
 
 def update_UI(pb: ttk.Progressbar, pb_label: ttk.Label, opened_pdf_file_location):
-    print(':>')
+    global is_thread_running
     global abstract_var, introduction_var, methods_var, \
         conclusion_var, references_var, extra_structure_var, references_number_var
 
@@ -234,10 +249,12 @@ def update_UI(pb: ttk.Progressbar, pb_label: ttk.Label, opened_pdf_file_location
     abstract, introduction, methods, conclusion, references, extra_structure, \
     max_reference_number = con.structure_evaluation(opened_pdf_file_location)
     # print(con.structure_evaluation(opened_pdf_file_location))
-
+    print(abstract, introduction, methods, conclusion, references, extra_structure, max_reference_number)
     # start thread
     pb.grid_forget()
     pb_label.grid_forget()
+
+    is_thread_running = 0
     # redeclare the checkboxes
 
     abstract_var.set(abstract)
@@ -248,6 +265,11 @@ def update_UI(pb: ttk.Progressbar, pb_label: ttk.Label, opened_pdf_file_location
     extra_structure_var.set(extra_structure)
     references_number_var.set(max_reference_number)
 
+    #show file selection
+    file_label.grid(row=0, column=0)
+    file_button.grid(row=0, column=1)
+
+    show_analize_button()
     selected_file_UI()
 
 
@@ -277,6 +299,8 @@ def get_UI_data():
     data_dictionary = {
         'data': prediction_data
     }
+    print(abstract_var.get(), introduction_var.get(), methods_var.get(), conclusion_var.get(), references_var.get(),
+          extra_structure_var.get(), references_number_var.get())
 
     prediction_score = api.quality_value(data_dictionary)
 
@@ -306,7 +330,7 @@ def show_quality(quality_number):
 
     newWindow=Toplevel()
     newWindow.title(selected_file_var.get())
-    newWindow.geometry("300x300")
+    newWindow.geometry("300x150")
     newWindow.grid()
 
     quality_var=StringVar()
