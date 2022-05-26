@@ -3,12 +3,12 @@ import tkinter.messagebox
 
 import requests
 
-model_url= 'https://l7y8f0kzil.execute-api.eu-west-2.amazonaws.com/model_prediction'
+model_url = 'https://l7y8f0kzil.execute-api.eu-west-2.amazonaws.com/model_prediction'
+
 
 def send_data(prediction_data):
     global model_url
-    headers={}
-    headers["Content-Type"]='application/json'
+    headers = {"Content-Type": 'application/json'}
     prediction = requests.post(model_url, headers=headers, json=prediction_data, timeout=5)
 
     print(prediction)
@@ -22,19 +22,18 @@ def send_data(prediction_data):
                                      message="Nepavyko išsiųsti duomenų")
         return
     if prediction.status_code == 200:
-        prediction_body=prediction.json()
+        prediction_body = prediction.json()
         return prediction_body
 
+
 def quality_value(prediction_data):
-    responceJSON=send_data(prediction_data)
+    responceJSON = send_data(prediction_data)
     predictions = responceJSON['predictions']
-    print(predictions)
     quality_1 = predictions[0][0]
     quality_2 = predictions[0][1]
     quality_3 = predictions[0][2]
     quality_4 = predictions[0][3]
     quality_5 = predictions[0][4]
-    print(quality_1)
     quality = -1
 
     if quality_1 > quality_2 and quality_1 > quality_3 and quality_1 > quality_4 and quality_1 > quality_5:
@@ -48,5 +47,4 @@ def quality_value(prediction_data):
     if quality_5 > quality_1 and quality_5 > quality_2 and quality_5 > quality_3 and quality_5 > quality_4:
         quality = 5
 
-    print(quality)
     return quality
